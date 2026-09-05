@@ -43,6 +43,32 @@ When you need more, Vicinae can be extended in several ways:
 
 Everything you need to know to get started with Vicinae is at [vicinae.com](https://vicinae.com). If you have any question, please feel free to come ask it on [discord](https://discord.gg/rP4ecD42p7)!
 
+## Portable build (this fork)
+
+The Windows **portable zip** (`vicinae-windows-*-portable-*.zip`, produced by `scripts/mkportable.ps1`) is fully self-contained:
+
+- Extract it anywhere (USB stick, `Downloads`, ...) and run `bin/vicinae.exe`.
+- All data — config, cache, state, logs, databases, themes and extensions — is
+  stored **inside the extracted folder** (`data/`, `config/`, `cache/`,
+  `state/`), never in `%LOCALAPPDATA%` or `~/.local`. Nothing is written
+  outside of the portable directory.
+- The bundled themes are discovered next to the executable, so they show up
+  out of the box.
+
+Portable mode is auto-detected: if the folder next to the executable is
+writable, Vicinae stays self-contained. You can force or disable it:
+
+- `VICINAE_PORTABLE=0` env var → always use `%LOCALAPPDATA%\vicinae` (normal layout).
+- `VICINAE_PORTABLE=1` env var → always portable.
+- A `vicinae.portable` marker file next to the executable → always portable
+  (this marker is shipped inside the portable zip itself).
+
+To build the portable zip yourself on Windows:
+
+```
+scripts/mkportable.ps1 -BuildDir build-release
+```
+
 ## Sponsors
 
 ### Gold sponsors

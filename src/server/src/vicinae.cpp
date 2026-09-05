@@ -28,6 +28,7 @@ fs::path Omnicast::dataDir() {
 #ifdef Q_OS_MACOS
   return homeDir() / ".local" / "share" / "vicinae";
 #elif defined(Q_OS_WIN)
+  if (vicinae::isPortableMode()) return vicinae::portableRoot() / "data";
   return winLocalAppData() / "data";
 #else
   return xdgpp::dataHome() / "vicinae";
@@ -38,6 +39,7 @@ fs::path Omnicast::configDir() {
 #ifdef Q_OS_MACOS
   return homeDir() / ".config" / "vicinae";
 #elif defined(Q_OS_WIN)
+  if (vicinae::isPortableMode()) return vicinae::portableRoot() / "config";
   return winLocalAppData() / "config";
 #else
   return xdgpp::configHome() / "vicinae";
@@ -50,6 +52,7 @@ fs::path Omnicast::cacheDir() {
 #ifdef Q_OS_MACOS
   return homeDir() / ".cache" / "vicinae";
 #elif defined(Q_OS_WIN)
+  if (vicinae::isPortableMode()) return vicinae::portableRoot() / "cache";
   return winLocalAppData() / "cache";
 #else
   return xdgpp::cacheHome() / "vicinae";
@@ -60,6 +63,7 @@ fs::path Omnicast::dataHome() {
 #ifdef Q_OS_MACOS
   return homeDir() / ".local" / "share";
 #elif defined(Q_OS_WIN)
+  if (vicinae::isPortableMode()) return vicinae::portableRoot() / "data";
   return winLocalAppData().parent_path();
 #else
   return xdgpp::dataHome();
@@ -82,7 +86,15 @@ std::vector<fs::path> Omnicast::systemDataDirs() {
   if (auto bundle = bundleResourceDir(); !bundle.empty()) { paths.emplace_back(std::move(bundle)); }
 #elif defined(Q_OS_WIN)
   auto const appDir = QCoreApplication::applicationDirPath().toStdString();
+  // Installed layout: prefix root (bin/..), where themes/ is deployed.
   paths.emplace_back((fs::path(appDir) / VICINAE_DATA_ROOT_REL).lexically_normal());
+  if (vicinae::isPortableMode()) {
+    // Portable layout: resources live next to the binary. Try both the
+    // portable root (parent of bin/) and the executable directory itself so
+    // themes/ is found regardless of how the zip was unpacked.
+    paths.emplace_back(vicinae::portableRoot());
+    paths.emplace_back(fs::path(appDir));
+  }
 #else
   auto const dd = xdgpp::dataDirs();
   paths.reserve(dd.size());

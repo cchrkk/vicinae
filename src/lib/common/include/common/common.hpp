@@ -30,6 +30,17 @@ std::filesystem::path stateDir();
 std::filesystem::path logFilePath();
 std::filesystem::path serverSocketPath();
 
+// True when running in portable mode: the executable lives in a writable
+// directory (e.g. an extracted zip), so all data must be stored next to the
+// binary instead of the per-user AppData / .local locations. Overridable with
+// the VICINAE_PORTABLE environment variable (0/1).
+bool isPortableMode();
+
+// Base directory used to store data in portable mode. This is the directory
+// containing the executable, or its parent when the binary sits in a "bin"
+// subdirectory (the layout produced by the portable package).
+std::filesystem::path portableRoot();
+
 std::string currentUserName();
 std::string serverSocketName();
 }; // namespace vicinae

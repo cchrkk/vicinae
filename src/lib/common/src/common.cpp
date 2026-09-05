@@ -3,8 +3,10 @@
 #include <clocale>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #ifdef __APPLE__
@@ -96,6 +98,7 @@ fs::path runtimeDir() {
   if (const char *t = std::getenv("TMPDIR")) return fs::path(t) / "vicinae";
   return "/tmp/vicinae";
 #elif defined(_WIN32)
+  if (isPortableMode()) return portableRoot() / "runtime";
   return fs::temp_directory_path() / "vicinae";
 #else
   if (const char *r = std::getenv("XDG_RUNTIME_DIR")) return fs::path(r) / "vicinae";
@@ -108,6 +111,7 @@ fs::path stateDir() {
   if (const char *h = std::getenv("HOME")) return fs::path(h) / ".local" / "state" / "vicinae";
   return "/tmp/vicinae";
 #elif defined(_WIN32)
+  if (isPortableMode()) return portableRoot() / "state";
   if (const char *l = std::getenv("LOCALAPPDATA")) return fs::path(l) / "vicinae" / "state";
   return fs::temp_directory_path() / "vicinae" / "state";
 #else
@@ -120,6 +124,51 @@ fs::path stateDir() {
 fs::path logFilePath() { return stateDir() / "vicinae.log"; }
 
 fs::path serverSocketPath() { return runtimeDir() / "vicinae.sock"; }
+
+fs::path portableRoot() {
+  const auto exeDir = selfPath().parent_path();
+#ifdef _WIN32
+  // The portable package lays the binaries out in a "bin" subdirectory, so
+  // the portable root is one level up (next to themes/, qml/, ...).
+  if (exeDir.filename() == "bin") { return exeDir.parent_path(); }
+#endif
+  return exeDir;
+}
+
+bool isPortableMode() {
+#ifdef _WIN32
+  static const bool portable = [] {
+    // Explicit flag takes precedence (VICINAE_PORTABLE=0 forces the AppData
+    // layout even from a writable folder).
+    if (const char *env = std::getenv("VICINAE_PORTABLE")) {
+      return std::string_view(env) != "0";
+    }
+
+    // Explicit marker file next to the executable forces portable mode even
+    // when the folder is not writable (e.g. copied from a blocked location).
+    if (std::filesystem::is_regular_file(portableRoot() / "vicinae.portable")) { return true; }
+
+    // Auto-detect: if we can write to the directory next to the executable,
+    // we are running from an extracted zip / user folder and should stay
+    // self-contained. Standard install locations (e.g. Program Files) are not
+    // writable by a regular user, which keeps the AppData behaviour there.
+    const auto root = portableRoot();
+    if (root.empty()) return false;
+
+    std::error_code ec;
+    const fs::path probe = root / ".vicinae-write-probe";
+    {
+      std::ofstream os(probe, std::ios::out | std::ios::trunc);
+      if (!os.is_open()) return false;
+    }
+    fs::remove(probe, ec);
+    return true;
+  }();
+  return portable;
+#else
+  return false;
+#endif
+}
 
 #ifdef _WIN32
 std::string currentUserName() {
